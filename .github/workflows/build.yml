@@ -1,62 +1,101 @@
 name: Build FLEX
 
 on:
+
   workflow_dispatch:
+
   push:
+
     branches: [ "main" ]
 
 jobs:
+
   build:
+
     runs-on: macos-26
 
     steps:
+
       - name: Checkout
+
         uses: actions/checkout@v4
+
         with:
+
           fetch-depth: 0
 
       - name: Select Xcode
+
         run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
       - name: Build FLEX
+
         run: |
+
           xcodebuild \
+
             -project FLEX.xcodeproj \
+
             -scheme FLEX \
+
             -configuration Release \
+
             -sdk iphoneos \
+
             -arch arm64 \
+
             BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+
             SKIP_INSTALL=NO \
+
             CODE_SIGNING_ALLOWED=NO
 
       - name: Prepare output
+
         run: |
+
           mkdir -p output
+
           cp -R build/Release-iphoneos/FLEX.framework output/
 
       - name: Create dylib wrapper
-        run: |
-          mkdir -p dylib
-          cat > dylib/FLEX.m <<EOF
-#import <Foundation/Foundation.h>
-#import <dlfcn.h>
 
-__attribute__((constructor))
-static void init_flex() {
-    dlopen("/Library/Frameworks/FLEX.framework/FLEX", RTLD_NOW);
-}
-EOF
+        run: |
+
+          mkdir -p dylib
+
+          echo '#import <Foundation/Foundation.h>' > dylib/FLEX.m
+
+          echo '#import <dlfcn.h>' >> dylib/FLEX.m
+
+          echo '' >> dylib/FLEX.m
+
+          echo '__attribute__((constructor))' >> dylib/FLEX.m
+
+          echo 'static void init_flex() {' >> dylib/FLEX.m
+
+          echo '    dlopen("/Library/Frameworks/FLEX.framework/FLEX", RTLD_NOW);' >> dylib/FLEX.m
+
+          echo '}' >> dylib/FLEX.m
 
       - name: Package
+
         run: |
+
           zip -r FLEX.framework.zip output/FLEX.framework
+
           zip -r FLEX.dylib.wrapper.zip dylib
 
       - name: Upload
+
         uses: actions/upload-artifact@v4
+
         with:
+
           name: FLEX
+
           path: |
+
             FLEX.framework.zip
+
             FLEX.dylib.wrapper.zip
