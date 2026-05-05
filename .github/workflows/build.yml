@@ -1,0 +1,61 @@
+name: Build FLEX (SPM)
+
+on:
+
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    runs-on: macos-latest
+
+    steps:
+
+      - name: Checkout
+
+        uses: actions/checkout@v4
+
+        with:
+
+          submodules: recursive
+
+      - name: Select Xcode
+
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Resolve Dependencies
+
+        run: swift package resolve
+
+      - name: Build Release
+
+        run: |
+
+          swift build -c release
+
+      - name: Find Binary
+
+        run: |
+
+          mkdir -p output
+
+          # Sucht das gebaute Binary
+
+          BINARY=$(find .build -type f -name "FLEX" | head -n 1)
+
+          echo "Found: $BINARY"
+
+          cp "$BINARY" output/FLEX
+
+          cp "$BINARY" output/libFLEX.dylib
+
+      - name: Upload Artifact
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: FLEX-build
+
+          path: output/
