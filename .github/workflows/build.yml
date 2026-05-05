@@ -1,67 +1,62 @@
-name: Build FLEX dylib
+name: Build FLEX
 
 on:
-
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
 jobs:
-
   build:
-
-    runs-on: macos-latest
+    runs-on: macos-26
 
     steps:
-
       - name: Checkout
-
         uses: actions/checkout@v4
-
         with:
-
-          submodules: recursive
+          fetch-depth: 0
 
       - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
-        run: sudo xcode-select -s /Applications/Xcode.app
-
-      - name: Build FLEX Framework
-
+      - name: Build FLEX
         run: |
-
           xcodebuild \
-
             -project FLEX.xcodeproj \
-
             -scheme FLEX \
-
             -configuration Release \
-
             -sdk iphoneos \
-
             -arch arm64 \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            SKIP_INSTALL=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-            CODE_SIGNING_ALLOWED=NO \
-
-            BUILD_DIR=build
-
-      - name: Extract dylib
-
+      - name: Prepare output
         run: |
-
           mkdir -p output
+          cp -R build/Release-iphoneos/FLEX.framework output/
 
-          FRAMEWORK=$(find build -name "FLEX.framework" | head -n 1)
+      - name: Create dylib wrapper
+        run: |
+          mkdir -p dylib
+          cat > dylib/FLEX.m <<EOF
+#import <Foundation/Foundation.h>
+#import <dlfcn.h>
 
-          echo "Framework: $FRAMEWORK"
+__attribute__((constructor))
+static void init_flex() {
+    dlopen("/Library/Frameworks/FLEX.framework/FLEX", RTLD_NOW);
+}
+EOF
 
-          cp "$FRAMEWORK/FLEX" output/libFLEX.dylib
+      - name: Package
+        run: |
+          zip -r FLEX.framework.zip output/FLEX.framework
+          zip -r FLEX.dylib.wrapper.zip dylib
 
-      - name: Upload dylib
-
+      - name: Upload
         uses: actions/upload-artifact@v4
-
         with:
-
-          name: libFLEX
-
-          path: output/libFLEX.dylib
+          name: FLEX
+          path: |
+            FLEX.framework.zip
+            FLEX.dylib.wrapper.zip
