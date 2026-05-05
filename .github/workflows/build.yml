@@ -1,4 +1,4 @@
-name: Build FLEX (SPM)
+name: Build FLEX Framework
 
 on:
 
@@ -24,31 +24,39 @@ jobs:
 
         run: sudo xcode-select -s /Applications/Xcode.app
 
-      - name: Resolve Dependencies
-
-        run: swift package resolve
-
-      - name: Build Release
+      - name: Build FLEX (iOS SDK)
 
         run: |
 
-          swift build -c release
+          xcodebuild \
 
-      - name: Find Binary
+            -scheme FLEX \
+
+            -configuration Release \
+
+            -sdk iphoneos \
+
+            -destination 'generic/platform=iOS' \
+
+            CODE_SIGNING_ALLOWED=NO \
+
+            BUILD_DIR=build
+
+      - name: Collect Framework
 
         run: |
 
           mkdir -p output
 
-          # Sucht das gebaute Binary
+          FIND=$(find build -name "FLEX.framework" | head -n 1)
 
-          BINARY=$(find .build -type f -name "FLEX" | head -n 1)
+          echo "Found: $FIND"
 
-          echo "Found: $BINARY"
+          cp -R "$FIND" output/
 
-          cp "$BINARY" output/FLEX
+          # optional dylib (für dein tweak)
 
-          cp "$BINARY" output/libFLEX.dylib
+          cp "$FIND/FLEX" output/libFLEX.dylib
 
       - name: Upload Artifact
 
@@ -56,6 +64,6 @@ jobs:
 
         with:
 
-          name: FLEX-build
+          name: FLEX-framework
 
           path: output/
