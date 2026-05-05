@@ -1,4 +1,4 @@
-name: Build FLEX Framework
+name: Build FLEX dylib
 
 on:
 
@@ -24,11 +24,13 @@ jobs:
 
         run: sudo xcode-select -s /Applications/Xcode.app
 
-      - name: Build FLEX (iOS SDK)
+      - name: Build FLEX Framework
 
         run: |
 
           xcodebuild \
+
+            -project FLEX.xcodeproj \
 
             -scheme FLEX \
 
@@ -36,34 +38,30 @@ jobs:
 
             -sdk iphoneos \
 
-            -destination 'generic/platform=iOS' \
+            -arch arm64 \
 
             CODE_SIGNING_ALLOWED=NO \
 
             BUILD_DIR=build
 
-      - name: Collect Framework
+      - name: Extract dylib
 
         run: |
 
           mkdir -p output
 
-          FIND=$(find build -name "FLEX.framework" | head -n 1)
+          FRAMEWORK=$(find build -name "FLEX.framework" | head -n 1)
 
-          echo "Found: $FIND"
+          echo "Framework: $FRAMEWORK"
 
-          cp -R "$FIND" output/
+          cp "$FRAMEWORK/FLEX" output/libFLEX.dylib
 
-          # optional dylib (für dein tweak)
-
-          cp "$FIND/FLEX" output/libFLEX.dylib
-
-      - name: Upload Artifact
+      - name: Upload dylib
 
         uses: actions/upload-artifact@v4
 
         with:
 
-          name: FLEX-framework
+          name: libFLEX
 
-          path: output/
+          path: output/libFLEX.dylib
